@@ -68,6 +68,7 @@ private:
   Matrix3x3 ndc_to_screen;
 
   std::vector<unsigned char> framebuffer;
+  std::vector<unsigned char> superFramebuffer;
   size_t width, height;
 
   // UI state info
@@ -75,7 +76,7 @@ private:
   bool left_clicked;
   int show_zoom;
   int sample_rate;
-
+  
   PixelSampleMethod psm;
   LevelSampleMethod lsm;
 

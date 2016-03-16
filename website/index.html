@@ -9,87 +9,452 @@
       padding-left: 100px;  
     }  
   </style> 
-<title>Your Name  |  CS 184</title>
+<title>Huu Tinh N Pham  |  CS 184</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
 <link rel="stylesheet" type="text/css" href="style.css" media="screen" />
 </head>
 <body>
 <br />
 <h1 align="middle">Assignment 1: Rasterizester</h1>
-    <h2 align="middle">Your Name</h2>
+    <h2 align="middle">Huu Tinh Nguyen Pham</h2>
 
     <div class="padded">
-        <p>Use this section to write an overview of the assignment. All of the text in your write-up should be <em>in your own words</em>. If you need to add additional HTML features to this document, you can search the <a href="http://www.w3schools.com/">http://www.w3schools.com/</a> website for instructions. To edit the HTML, you can just copy and paste existing chunks and fill in the text and image file names appropriately.</p>
-        <o>The website writeup is intended to be a self-contained walkthrough of the assignment: we want this to be a piece of work which showcases your understanding of relevant concepts through both rendered images as well as written explanations about what you did to complete each part of the assignment. Try to be as clear and organized as possible when writing about your own output files or extensions to the assignment. We want to understand what you've achieved and how you've done it!</p> 
-        <p>If you are well-versed in web development, feel free to ditch this template and make a better looking page. Just make sure that you include all the components as we've laid them out here. </p>
-        <p>For required images, keep the image size fixed at the native width of the file to avoid artifacts. You might want to adjust your rasterizester window size down to be less than 1000 pixels wide if you are working on a retina display screen, since the 1920 by 1280 images will be enormous on normal monitors.</p>
 
     <h2 align="middle">Part 1: Rasterizing Lines</h2>
-        <p>Describe what you did in Part 1. Show your result here. You could talk about which line rasterizing algorithm you used, any issues you ran into and had to debug (with example images), and any clever modifications you made to the algorithm to reduce the number of special cases.</p>
-        <div align="left">
+        <p><b>Description:</b> For this part what I did was first I find the slope of the line by using basic math formula:</p>
+        <p align="middle"><pre align="middle">slope = (y1 - y0)/(x1 - x0)</pre></p>
+        <p>then based on the slope I would choose to scan in the x, or y direction. When scanning in a direction I would add 1 to that direction while adding either slope or inverse slope depending on which direction. Example, if I scan in the x direction (stepping 1 pixel at a time in the x coordinate), then I would add slope to y, since slope = rise/run if run = 1 then slope = rise (which is how much we want to increase y by). Same concept when scanning in the other direction. To choose which direction to scan, if the absolute value of the slope if low (less than 1) then I would scan in the x direction. The reason for that is because if the slope = 0, and if I scan in the y direction then I only draw one pixel at (0, 0).</p>
+
+        <p><b>Problems:</b> the main bug I encountered in this problem is not knowing that you have to scan in a specific direction depending on the slope, thus for a long time I was unable to get horizontal lines, and the lines near the horizontal lines were very dotted. The reason I found for this was because I was scanning only in the y direction, once I chance y by 1 I would change x by a lot since slope is low the inverse turns out to be very high, thus I moved too much in the x direction in this case. To solve this I added conditional statements that if absolute value of slope is less than 1 I would scan in x direction, otherwise scan in the y direction.</p>
+
+        <div align="middle">
             <table style="width=100%">
                 <tr>
                     <td align="middle">
-                    <img src="images/example_image.jpg" width="800px" />
-                    <figcaption align="middle">Results Caption: include at least one png of svg/basic/test2.svg in this section</figcaption>
+                    <img src="images/part1_bug.png" width="800px" />
+                    <figcaption align="middle">Caption: This picture shows how scanning in only one direction (y-direction, while changing x by inverse slope) leads to dotted/non-existing lines</figcaption>
                 </tr>
             </table>
         </div>
-        <p>Here is an example of how to include a simple formula:</p>
-        <p align="middle"><pre align="middle">a^2 + b^2 = c^2</pre></p>
-        <p>or, alternatively, you can include an image of a LaTex formula.</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part1_fixed.png" width="800px" />
+                    <figcaption align="middle">Caption: result after I started to scan in a direction depending on the value of the slope</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_1.png" width="800px" />
+                    <figcaption align="middle">Part 1 Deliverable</figcaption>
+                </tr>
+            </table>
+        </div>
 
     <h2 align="middle">Part 2: Rasterizing single-color triangles</h2>
-        <p>Describe what you did in Part 2. Show your result here. Explain any bugs you had to work through, with pictures if possible. Explain any special optimizations you did beyond simple bounding box triangle rasterization, with a timing comparison table (we suggest using the c++ clock() function around the svg.draw() command in DrawRend::redraw() to compare millisecond timings with your various optimizations off and on).</p>
-        <p>Here is an example table. You could put timing comparisons here, for example.</p>
-        <div align="left">
-            <table style="width=100%" border="1px" cellpadding="10px">
+        <p><b>Description:</b> for this part first I find the box that the triangle could fit in by finding the smallest, and largest x and y values between the input points. From there I started to scan from the smallest x to the largest x in the horizontal direction, and smallest y to the largest y in the y direction. This will provide me with all the points that could be in the current triangle. I then find the nearest pixel to that point by adding 0.5 to both x and y directions and flooring it (which rounds the point to near integer). For each point in this region I follow the barymetric formula to determine whether the point is inside or outside of the triangle. The barycentric formula is as follow:</p>
+
+        <p align="middle"><pre align="middle">alpha = ((y1 - y2)*(x - x2) + (x2 - x1)*(y - y2))/((y1 - y2)*(x0 - x2) +(x2 - x1)*(y0 - y2))</pre></p>
+        <p align="middle"><pre align="middle">beta = ((y2 - y0)*(x - x2) + (x0 - x2)*(y - y2))/((y1 - y2)*(x0 - x2) +(x2 - x1)*(y0 - y2))</pre></p>
+		<p align="middle"><pre align="middle">gamma = 1 - alpha - beta</pre></p>
+
+		<p>where (x, y) is the point we are determining whether it is inside the triangle or not, and (x0, y0), (x1, y1), (x2, y2) are the vertices of the triangle. what the berycentric formula does is it uniquely determine points compared to the vertices using ratio (as explained in lecture and the book). If all alpha, beta, and gamma are in between 0 and 1, then the ratio is in between all vertices, which means that the point is within the triangle, then we would draw that point.</p>
+
+		<p><b>problems:</b> The main problem I encountered in this problem is when attempting a different method. The method consists of dividing the triangle into two parts through the point that has the middle y value. What this does is that it devides the triangle into two parts with a flat base, which allows me to scan in the x direction from the top and bottom point to the flat base. As I scan I kept track of two X the left and the right, which moves relative to the left and right leg (slope) of the triangle then draw a line from left x to right x until the base of the triangle for both parts. However I was unable to keep track of the slope for the bottom part of the triangle thus it started to draw outside of the triangle. After two days of trying and debugging this, I decided to stop this and use simple barycentric formula which proved to be effective.</p>
+
+        <div align="middle">
+            <table style="width=100%">
                 <tr>
-                    <td>
-                    <p>Row 1, Col 1</p>
-                    <td>
-                    <p>Row 1, Col 2</p>
-                    <td>
-                    <p>Row 1, Col 3</p>
-                <tr>
-                    <td>
-                    <p>Row 2, Col 1</p>
-                    <td>
-                    <p>Row 2, Col 2</p>
-                    <td>
-                    <p>Row 2, Col 3</p>
+                    <td align="middle">
+                    <img src="images/part2_bug.png" width="800px" />
+                    <figcaption align="middle">Caption: This was using the scanning method after dividing the triangle into two, it had trouble rasterizing when the slopes are too extreme as shown with the red triangle.</figcaption>
                 </tr>
             </table>
         </div>
 
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part2_fixed.png" width="800px" />
+                    <figcaption align="middle">Caption: this was rasterized using barycentric method. Even though it worked, the algorithm was unable to draw at some places, and jaggies were a major problem.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_2.png" width="800px" />
+                    <figcaption align="middle">Part 2 deliverable</figcaption>
+                </tr>
+            </table>
+        </div>
+
+
     <h2 align="middle">Part 3: Antialiasing triangles</h2>
-        <p>Describe what you did in Part 3. Show your result here. Explain any bugs you had to work through, with pictures if possible. Explain the basic structure of the modifications you made to the DrawRend rasterization pipeline in order to implement supersampling. If you implement alternative antialiasing methods, describe them and include comparison pictures demonstrating the difference between your method and grid-based supersampling.</p>
+        <p><b>Description:</b> I started by modifying rasterize triangle, and rasterize line by blowing up every vertices that was given by multiplying every coordinates by the squareroot of sample rate. I then made a new buffer that is big enough to store this bigger picture. I then follow the normal rasterization way in part two to draw the triangles, except instead of drawing each point into the original buffer I'd write it into the new bigger buffer. This buffer has 4*width*height*samplerate, which is the total number of samples in the picture. I then follow the normal rasterization way in part two to draw the triangles, except instead of drawing each point into the original buffer I'd write it into the new bigger buffer. I now then have a bigger version of the given picture, its size is equals to the original size multiplies by the samplerate. I then scan over using width and height of the picture, using that width and height I index into the bigger buffer, instead of using 4*(x + y*width) to index into buffer by scanling x, y, width, and height. when indexing into this I'd average up all the sample points within squareroot sample rate by squareroot sample rate box (downsampling method) then add it back into the original buffer.</p>
+
+        <p><b>Problems:</b> there were a few problems within this part, the first one is indexing into the bigger buffer. At first I forgot that within each pixels there are four values so my indexing was always 1/4 what I was supposed to index into. Additionally I had trouble with indexing into the next row, when average all the points within the sample box you'd have to move into the next row and I was not doing that thus that proved to be incorrect as well. After much longing and think I finally got the indexing correct realizing you have to interate from 0 to squareroot of sample rate and iterate through the points moving in both column and row directions. Additionally with incorrect indexing many segmentation faults (my best friends) also followed. The second problem I faced was faded lines. I then realized that when blowing up the image my line was still drawn very thinly with a width of only 1 pixel. I then realized that you needed to blow up the width of the line as well, I fixed this by instead of drawing just one pixel for the width I would draw square root sample number of pixels in either x or y direction (depending how it was scanned in part 2) which gives the line a much thicker width. After this when supersampled the lines were not as faded.</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/preSupersample.png" width="800px" />
+                    <figcaption align="middle">Caption: this picture shows the triangles before supersampling, which contains missing lines and lots of jaggies</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/postSupersample.png" width="800px" />
+                    <figcaption align="middle">Caption: this shows how the triangles are much smoother after super sampling (sample rate = 16) and it seems to be connected and continuous.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/fadedline.png" width="800px" />
+                    <figcaption align="middle">Caption: the lines before the width was correct in super sampling, which appears faded.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/correctline.png" width="800px" />
+                    <figcaption align="middle">Caption: when taken into account that the width of the lines needed to be blownup as well when super sampling, which appears a lot thicker and darker.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_3.1.png" width="800px" />
+                    <figcaption align="middle">Part 3 deliverable with samplerate = 1</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_3.2.png" width="800px" />
+                    <figcaption align="middle">Part 3 deliverable with samplerate = 4</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_3.3.png" width="800px" />
+                    <figcaption align="middle">Part 3 deliverable with samplerate = 9</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_3.4.png" width="800px" />
+                    <figcaption align="middle">Part 3 deliverable with samplerate = 16</figcaption>
+                </tr>
+            </table>
+        </div>
 
     <h2 align="middle">Part 4: Transforms</h2>
-        <p>Describe what you did in Part 4. Show your result here. Explain any bugs you had to work through, with pictures if possible. Describe the new svg file you created, and show the rasterized result. Explain the reasoning behind your use of the transform stack in your new file. If you added any extra features to the GUI, describe them, and depict the result if it is visualizable (e.g. if you add rotation controls).</p>
+        <p><b>Description:</b> The transformations for this part was fairly straight forward, all I did was simply plug in the transformation matrices that was given in class into the relatively correct transformation function. For a while I didnot know what to do with move_view function, then I tried to multiply out the matrix within set view with [x y 1] I then realized that it turns into [span span 2*span], which is the size of the screen. I also realized that the last column of svg_to_ndc[current_svg] consists of [-x + span, - y + span, 2*span] which means I can extract the current center (x, y) from there. Then I simply made a new 3x3 matrix:</p>
+
+        <p align="middle"><pre align="middle"> 1, 0, (-x+span+dx)*zoom</pre></p>
+        <p align="middle"><pre align="middle"> 0, 1, (-y+span+dy)*zoom</pre></p>
+        <p align="middle"><pre align="middle"> 0, 0,       2*span*zoom</pre></p>
+
+        which when multiplies with [x y 1] would produce the originall matrix in set_view with dx added to the first row, dy added to the second, and zoom multiplied to every row. which simplied moved the view.
+
+        <p><b>Problems:</b> I did not encountered any bug in this problem, the main problem I faced in this problem was learning what to do with move_view and how to create a matrix such that when multiplied with [x y 1] would yield a new view with dx, dy, and zoom. Also another problem is timing, when moving the program has to draw everything, thus everything is laggy with transformations.</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_og.png" width="800px" />
+                    <figcaption align="middle">Caption: original image of basic/test3 with no transformation</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_transformed.png" width="800px" />
+                    <figcaption align="middle">Caption: image after zooming out (scaling) and moving the picture to the right (translation)</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+        <p><b>Transformation:</b>to prove that this works, what I did was I created a human (picture 1) where his whole body is in one group. Then within that group there is a child group which are the legs. I first translated the legs to show that they are both in the same group (picture 2). I then rotated the whole body while translating it into a vertex so that it fits the screen, as you can see the legs also translated with the body(picture 3). Lastly is to show that I could still move the legs as a group independently of the whole body I translated the leg a bit further (picture 4)<p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_1.png" width="800px" />
+                    <figcaption align="middle">Caption: picture 1</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_2.png" width="800px" />
+                    <figcaption align="middle">Caption: picture 2</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_3.png" width="800px" />
+                    <figcaption align="middle">Caption: picture 3</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part4_4.png" width="800px" />
+                    <figcaption align="middle">Caption: picture 4</figcaption>
+                </tr>
+            </table>
+        </div>
 
     <h2 align="middle">Part 5: Barycentric coordinates</h2>
-        <p>Describe what you did in Part 5. Introduce and explain barycentric coordinates, perhaps with an svg file that plots a single triangle with one red, one green, and one blue vertex. Show your result here. Explain any bugs you had to work through, with pictures if possible. Include at least one png of svg/basic/test7.svg. If you make any additional images with color gradients, include them.</p>
+        <p><b>Description:</b> Since I have already calculated the barycentric coordinates for part 2, thus there was no need for any new calculations. What I did was I checked if the pointer *tri was NULL, if it wasn't null then I'd create a new 2d vector that consists of alpha, beta (calculated in part 2) for each point. That then is passed into tri->color(...) function. Within the tricolor function within svg.cpp I calculate the last barycentric coordinate, gamma, by taking the difference between 1 and (alpha + beta). Since barycentric coordinates describe the ratio between the current point relative to the three vecterices, and ac, bc, cc are the given colors of the three coordinates a, b, c, all we need to do is scale rgba within the three vertices by alpha, beta, and gamma respectively to get the color of the current vertex.</p>
+
+        <p><b>Problems:</b> there were no major bug within this part for me, the only problem I've faced is learning c++. Since I've never coded in c++ and very little in c, I did not know or understand how struct works in c++. Thus for awhile I did not know that you were able to access ac, bc, and cc, simply by calling it. So for main part for this problem was learning and understanding c++.</p>
+
+       	<div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part5.png" width="800px" />
+                    <figcaption align="middle">Caption: The colors within the circle is determined through barycentric coordinates. Where the circle is decomposed into triangles with color values on each vertex. These values are weighted by barycentric to determine the color within each triangle.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_5.png" width="800px" />
+                    <figcaption align="middle">Part 5 deliverable</figcaption>
+                </tr>
+            </table>
+        </div>
+
+
 
     <h2 align="middle">Part 6: Pixel sampling for texture mapping</h2>
-        <p>Describe what you did in Part 6. Discuss the two different pixel sampling methods. Show a good example from svg/texmap/ of a case where bilinear looks much better than nearest sampling. Talk about when there will be a large difference between the two methods and when the difference will not matter.</p>
+        <p><b>Description:</b> for this part I started with rasterize_triangle by creating a new sp, and inserting the lsm, psm into the sp. Then plug in the new sp along with two dummies vectors (dx, dy) into the tri->color function that was available in part 5. Then with similar concept to part 5, I used the barycentric coordinates in xy to find gamma, then use that as weight for a_uv, b_uv, and c_uv to construct a new uv vector for the current point. That is then passed into tri->sample. Within Texture::sample I used the passed in sp to extract psm to determine how to construct the new color, nearest pixel when psm is 0, and bilinear interpolation when psm is 1. For nearest pixel algorithm, first I extract the texels by deferencing a pointer to mipmap[level] where level is 0. I then denormalized the uv coordinates by multiplying uv.x by the width of the mipmap, and uv.y by the height of the mipmap. I then extract the texels by calling mipmap.texels. To get to the nearest pixel I simply use the function where I add 0.5 to the float and floor it for both dernomalized x and denormalized y. I then indexed into the texels map using 4*(x + y*width). Then extract 4 consective bytes into a new array and pass that into the Color constructor. As for the bilinear interpolation part I accessed the texels and denomalized the coordinates same way as the nearest pixel function. From there I floored by x, and y to find the bottom right coordinate; ceiled x, and floor y to find the bottom left coordinate, and so on. This gives me four coordinates that surrounds the current uv coordinate. I then caculate dx, dy (which played a role as scalar for the interpolation formula LLLEEEEERRRPPPP, LERP) between uv, and the bottomright coordinate. I now then have all four coordinates and scalars to find the interpolation for the current point. I simply plugged everything into the interpolation formula that was given in the slide.</p>
+
+        <p><b>Problems:</b> One major problem was not knowing that the given uv coordinates were normalized. Thus for a long time I was unaware that you had to scale the coordinates back up. Additionally another problem that I faced was the difference between the Color constructors, one take in floats (rgba), while the other takes in a char pointer. Since the texels map was a char pointer, I had to make a new pointer, pass the values into that pointer, and pass it into the constructor. For awhile I was passing 4 chars into the constructor and they were interpreted as four rgba floats. Another problem I faced was that I didnot know you were suppose to pass in the color values into the LERP formula instead of the coordinate. Lastly is that I multiplied the denormalized y by width and add x then floor/ceil that to index into texels, instead of flooring/ceil denormalized y before multiplying by width. Which was the incorrect indexing, since the small difference between integer and float in denormalized when multiply by a big width made a big change in the indexing. </p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part6_bug.png" width="800px" />
+                    <figcaption align="middle">Caption: This was when I did not floor or ceil the y coordinate before multiplying by width, which offset the texel incorrectly</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part6_fixed.png" width="800px" />
+                    <figcaption align="middle">Caption: After the fix, where I floored and ceiled the y coordinate before multiplying by width.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_6.1.png" width="800px" />
+                    <figcaption align="middle">Part 6 Deliverable with P_NEAREST, and 1 sample per pixel</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_6.2.png" width="800px" />
+                    <figcaption align="middle">Part 6 Deliverable with P_BILINEAR, and 1 sample per pixel</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_6.3.png" width="800px" />
+                    <figcaption align="middle">Part 6 Deliverable with P_NEAREST, and 16 sample per pixel</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_6.4.png" width="800px" />
+                    <figcaption align="middle">Part 6 Deliverable with P_BILINEAR, and 16 sample per pixel</figcaption>
+                </tr>
+            </table>
+        </div>
 
     <h2 align="middle">Part 7: Level sampling with mipmaps for texture mapping</h2>
-        <p>Describe what you did in Part 7. Pull some png images from the internet and create your own svg files to demonstrate the strengths and weaknesses of various techniques at different zoom levels. You can take existing files in svg/texmap/ and replace the texture filename to try out new images. Show at least one example (using a png file you find yourself) comparing all four combinations of one of L_ZERO and L_NEAREST with one of P_NEAREST and P_BILINEAR at a zoomed out viewpoint. If you implement any extra filtering methods, describe them and show comparisons.</p>
+        <p><b>Description:</b> Once again I started in rasterize triangle, where I calculated the barycentric coordinates not only for the current (x, y), but I also calculated the barycentric coordinate for (x + 1, y), and (x, y + 1). I then create two vectors to store alpha, and beta values for both of those points and they are then passed into the tri->color(...) method. Within the TexTri::Color(...) function those two vectors are then used to calculate the actual uv coordinates (weighted sum of a_uv, b_uv, and c_uv). From there I can use those two points to calculate du/dx, dv/dx, du/dy, dv/dy. Which are then passed into sp are two vectors du, and dv. Where sp is passed into tex->sample(sp). Within sample I check for the value for lsm, where if lsm == 0, I would leave level equals to 0 and texture map as I would in part 6. However, if lsm == 1 then I would seek for the near level, by passing sp into get_level. Within get_level(...), first I denormalized both the x and y coordinates of du and dv. From there using the denormalized coordinate and the given formula to find the nearest level, I'd return the float that's calculated by the formula. However with the returned value I capped the lowest value to 0, and convert it into an int. Since 0 is the lowest level (any level lower than 0 shows that samples are too small) this prevents seg fault. Then that level is passed into either nearest sample or bilinear depending on the value of psm. Last thing I took care of was the case where lsm is equals to 2, which means we'd have to trinilinear interpolate. For this case I find the difference between level, and the floor of level and ceiling of level. The difference between level and floor(level) is then multiplied with the color value found by bilinear interpolation of ceil(level). The other is used for bilinear interpolation of floor(level). Those two are then summed up and returned.</p>
+
+        <p><b>Problems:</b> The main problem was that I did not scale the normalized values, which gave me negative levels. Additonally, I did not cap the minimum value of level to 0, which results in multiple seg faults. Additionally for the texmap/test3.svg case at certain pixel the level go up to 12, however there were only 11 available levels, this also caused segmentation fault. Thus I had to check mipmap size to cap the level that can be accessed is the max number of levels available. Last main problem that I faced for this part is multiplying the scaling factor of trilinear interpolation incorrectly. I multiplied the difference between level and ceil(level) to the value returned by bilinear interpolation of ceil(level). Lastly is when trilinear interpolation when level is equals to 0, the problem with this is that when ceiling or flooring 0, we always end up with 0. Then the difference between them are always 0, so when scaling by 0 I started to lose all the pixels at level 0.</p>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part7_bug.png" width="800px" />
+                    <figcaption align="middle">Caption: Did not check for level 0 during trilinear interpolation (thus all the differences were 0), this deleted all the pixels that are exactly at level 0.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/part7_fixed.png" width="800px" />
+                    <figcaption align="middle">Caption: After the fix, where if the level is exacty equals to 0, then I simply return the bilienar interpolation of the level 0.</figcaption>
+                </tr>
+            </table>
+        </div>
+
+    <h3 align="middle">Deliverables:</h3>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_7.1.png" width="800px" />
+                    <figcaption align="middle">Part 7 Deliverable with L_ZERO, and P_NEAREST</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_7.2.png" width="800px" />
+                    <figcaption align="middle">Part 7 Deliverable with L_NEAREST, and P_NEAREST</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_7.3.png" width="800px" />
+                    <figcaption align="middle">Part 7 Deliverable with L_ZERO, and P_BILINEAR</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_7.4.png" width="800px" />
+                    <figcaption align="middle">Part 7 Deliverable with L_NEAREST, and P_BILINEAR</figcaption>
+                </tr>
+            </table>
+        </div>
+
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_7.5.png" width="800px" />
+                    <figcaption align="middle">Part 7 Deliverable with L_BILINEAR, and P_BILINEAR</figcaption>
+                </tr>
+            </table>
+        </div>
+
+
 
     <h2 align="middle">Part 8: My drawing</h2>
-        <p>Describe your original drawing and include a picture of it. This part is extremely open ended, and if you decide to devote a lot of time to making an awesome picture, it's worth explaining how you did it!</p>
 
-    <h2 align="middle">A Few Notes On Webpages</h2>
-        <p>Here are a few problems students have encountered in the past. You will probably encounter these problems at some point, so don't wait until right before the deadline to check that everything is working. Test your website on the instructional machines early!</p>
-        <ul>
-        <li>Your main report page should be called index.html.</li>
-        <li>Be sure to include and turn in all of the other files (such as images) that are linked in your report!</li>
-        <li>Use only <em>relative</em> paths to files, such as <pre>"./images/image.jpg"</pre>
-        Do <em>NOT</em> use absolulte paths, such as <pre>"/Users/student/Desktop/image.jpg"</pre></li>
-        <li>Pay close attention to your filename extensions. Remember that on UNIX systems (such as the instructional machines), capitalization matters. <pre>.png != .jpeg != .jpg != .JPG</pre>
-        <li>Be sure to adjust the permissions on your files so that they are world readable. For more information on this please see this tutorial: <a href="http://www.grymoire.com/Unix/Permissions.html">http://www.grymoire.com/Unix/Permissions.html</a></li>
-        <li>And again, test your website on the instructional machines early!</li>
+        <p><b>Description:</b>Since I am unfamiliar with script, and svg I was not sure how to make anything recursive. My main goal for this was to make something nice with as few triangles as possible. Thus I settled with something simple, by first draw something nice on paper then create a grid for it. I then found out that you could use colortri to make the image, thus I decomposed my image into triangles. After that I simplied filled in svg file one triangle at a time with the color values I wanted and below was the result.</p>
+
+
+    <h3 align="middle">Deliverables:</h3>
+        <div align="middle">
+            <table style="width=100%">
+                <tr>
+                    <td align="middle">
+                    <img src="images/deliverable_8.png" width="800px" />
+                    <figcaption align="middle">Part 8 Deliverable</figcaption>
+                </tr>
+            </table>
+        </div>
+
 </div>
 </body>
 </html>

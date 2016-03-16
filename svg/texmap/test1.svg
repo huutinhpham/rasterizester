@@ -4,7 +4,7 @@
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="200.0px" height="200.0px" viewBox="0 0 200 200" enable-background="new 0 0 200 200"
 	 xml:space="preserve">
-<texture filename="../img/map.png" texid="map"/>
+<texture filename="../img/VD.png" texid="map"/>
 <textri texid="map" uvs="0.125 0.125 0.145833 0.125 0.125 0.145833" points="46.8018 46.791 47.8724 44.8695 44.8743 47.8612"/>
 <textri texid="map" uvs="0.145833 0.125 0.125 0.145833 0.145833 0.145833" points="47.8724 44.8695 44.8743 47.8612 45.5199 45.508"/>
 <textri texid="map" uvs="0.125 0.145833 0.145833 0.145833 0.125 0.166667" points="44.8743 47.8612 45.5199 45.508 43.0826 49.1605"/>

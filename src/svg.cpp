@@ -47,7 +47,11 @@ void Triangle::draw(DrawRend *dr, Matrix3x3 global_transform) {
  */
 Color ColorTri::color(Vector2D xy, Vector2D dx, Vector2D dy, SampleParams sp) {
   // Part 5: Fill this in.
-  return Color();
+  float alpha = xy.x;
+  float beta = xy.y;
+  float gamma = 1-alpha-beta;
+  return Color(ac.r*alpha + bc.r*beta + cc.r*gamma,ac.g*alpha + bc.g*beta + cc.g*gamma,
+         ac.b*alpha + bc.b*beta + cc.b*gamma, ac.a*alpha + bc.a*beta + cc.a*gamma);
 }
 
 /** 
@@ -59,8 +63,34 @@ Color ColorTri::color(Vector2D xy, Vector2D dx, Vector2D dy, SampleParams sp) {
  */
 Color TexTri::color(Vector2D xy, Vector2D dx, Vector2D dy, SampleParams sp) {
   // Part 6: Fill in the uv member of sp and pass it along to tex->sample.
-  // Part 7: Fill in the du and dv members of sp as well.
+  float alpha = xy.x;
+  float beta = xy.y;
+  float gamma = 1-alpha-beta;
+  Vector2D myUV = Vector2D(alpha*a_uv.x + beta*b_uv.x + gamma*c_uv.x, 
+                           alpha*a_uv.y + beta*b_uv.y + gamma*c_uv.y);
+  sp.uv = myUV;
 
+  // Part 7: Fill in the du and dv members of sp as well
+  float alphaR = dx.x;
+  float betaR = dx.y;
+  float gammaR = 1-alphaR-betaR;
+  Vector2D myDX = Vector2D(alphaR*a_uv.x + betaR*b_uv.x + gammaR*c_uv.x, 
+                           alphaR*a_uv.y + betaR*b_uv.y + gammaR*c_uv.y);
+
+  float alphaT = dy.x;
+  float betaT = dy.y;
+  float gammaT = 1-alphaT-betaT;
+  Vector2D myDY = Vector2D(alphaT*a_uv.x + betaT*b_uv.x + gammaT*c_uv.x, 
+                           alphaT*a_uv.y + betaT*b_uv.y + gammaT*c_uv.y);
+
+  float du_dx = myDX.x - myUV.x;
+  float dv_dx = myDX.y - myUV.y;
+  float du_dy = myDY.x - myUV.x;
+  float dv_dy = myDY.y - myUV.y;
+
+  sp.du = Vector2D(du_dx, du_dy);
+  sp.dv = Vector2D(dv_dx, dv_dy);
+  
   return tex->sample(sp);
 }
 

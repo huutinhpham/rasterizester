@@ -57,6 +57,7 @@ void DrawRend::resize( size_t w, size_t h ) {
   width = w; height = h;
 
   framebuffer.resize(4 * w * h);
+  superFramebuffer.resize(4 * sample_rate * w * h);
 
   float scale = min(width, height);
   ndc_to_screen(0,0) = scale; ndc_to_screen(0,2) = (width  - scale) / 2;
@@ -176,6 +177,7 @@ void DrawRend::keyboard_event( int key, int event, unsigned char mods ) {
       if (sample_rate < 16) {
         sample_rate = (int)(sqrt(sample_rate)+1)*(sqrt(sample_rate)+1);
         // Part 3: might need to add something here
+        superFramebuffer.resize(4 * sample_rate* width * height);
         redraw();
       }
       break;
@@ -183,6 +185,7 @@ void DrawRend::keyboard_event( int key, int event, unsigned char mods ) {
       if (sample_rate > 1) {
         sample_rate = (int)(sqrt(sample_rate)-1)*(sqrt(sample_rate)-1);
         // Part 3: might need to add something here
+        superFramebuffer.resize(4 *sample_rate* width * height);
         redraw();
       }
       break;
@@ -254,6 +257,7 @@ void DrawRend::write_screenshot() {
  */
 void DrawRend::redraw() {
   memset(&framebuffer[0], 255, 4 * width * height);
+  memset(&superFramebuffer[0], 255, 4 * sample_rate * width * height);
 
   SVG &svg = *svgs[current_svg];
   svg.draw(this, ndc_to_screen*svg_to_ndc[current_svg]);
@@ -279,6 +283,32 @@ void DrawRend::redraw() {
  */
 void DrawRend::resolve() {
   // Part 3: Fill this in
+  int sqrtSR = sqrt(sample_rate);
+  for (int scanY = 0; scanY < height; scanY++){
+    for (int scanX = 0; scanX < width; scanX++){
+      int blowupX = scanX*sqrtSR;
+      int blowupY = scanY*sqrtSR;
+      unsigned char* superP = &superFramebuffer[0] + 4*(blowupY*width*sqrtSR + blowupX);
+      unsigned char* p = &framebuffer[0] + 4*(scanY*width + scanX);
+      int newR = 0.0;
+      int newG = 0.0;
+      int newB = 0.0;
+      int newA = 0.0;
+      for (int sampleY = 0; sampleY < sqrtSR; sampleY++){
+        for (int sampleX = 0; sampleX < sqrtSR; sampleX++){
+          newR += (int) superP[0 + 4*sampleX];
+          newG += (int) superP[1 + 4*sampleX];
+          newB += (int) superP[2 + 4*sampleX];
+          newA += (int) superP[3 + 4*sampleX];
+        }
+        superP = superP + width*sqrtSR*4;
+      }
+      p[0] = (unsigned char) (newR/sample_rate);
+      p[1] = (unsigned char) (newG/sample_rate);
+      p[2] = (unsigned char) (newB/sample_rate);
+      p[3] = (unsigned char) (newA/sample_rate);
+    }
+  }
 }
 
 /**
@@ -401,6 +431,7 @@ void DrawRend::view_init() {
  * corresponds to the [0,1]^2 rectangle.
  */
 void DrawRend::set_view(float x, float y, float span) {
+
   svg_to_ndc[current_svg] = Matrix3x3(1,0,-x+span,  0,1,-y+span,  0,0,2*span);
 }
 
@@ -410,21 +441,28 @@ void DrawRend::set_view(float x, float y, float span) {
  */
 void DrawRend::move_view(float dx, float dy, float zoom) {
   // Part 4: Fill this in
-
+  Vector3D& col = svg_to_ndc[current_svg].column(2);
+  float span = (col.z)/2;
+  float x = -(col.x - span);
+  float y = -(col.y - span);
+  svg_to_ndc[current_svg] = Matrix3x3(1, 0, (-x+span+dx)*zoom,
+                                      0, 1, (-y+span+dy)*zoom,
+                                      0, 0, 2*span*zoom);
 }
 
   // rasterize a point
 void DrawRend::rasterize_point( float x, float y, Color color ) {
   // fill in the nearest pixel
+  int sqrtSR = sqrt(sample_rate);
   int sx = (int) floor(x);
   int sy = (int) floor(y);
 
   // check bounds
-  if ( sx < 0 || sx >= width ) return;
-  if ( sy < 0 || sy >= height ) return;
+  if ( sx < 0 || sx >= sqrtSR*width ) return;
+  if ( sy < 0 || sy >= sqrtSR*height ) return;
 
   // perform alpha blending with previous value
-  unsigned char *p = &framebuffer[0] + 4 * (sx + sy * width);
+  unsigned char *p = &superFramebuffer[0] + 4 * (sx + sy*width*sqrtSR);
   float Ca = p[3] / 255., Ea = color.a;
   p[0] = (uint8_t) (color.r * 255 * Ea + (1 - Ea) * p[0]);
   p[1] = (uint8_t) (color.g * 255 * Ea + (1 - Ea) * p[1]);
@@ -438,6 +476,38 @@ void DrawRend::rasterize_line( float x0, float y0,
                      Color color) {
 
   // Part 1: Fill this in
+  float sqrtSR = sqrt(sample_rate);
+  float blowupX0 = sqrtSR*x0;
+  float blowupY0 = sqrtSR*y0;
+  float blowupX1 = sqrtSR*x1;
+  float blowupY1 = sqrtSR*y1;
+
+  float slope = (blowupY1 - blowupY0)/(blowupX1 - blowupX0);
+  if (std::abs(slope) <= 1){
+    if (blowupX0 > blowupX1) {
+      swap(blowupX0, blowupX1); swap(blowupY0, blowupY1);
+    }
+    slope = (blowupY1 - blowupY0)/(blowupX1 - blowupX0);
+    do {
+      for (int i = 0; i < sqrtSR; i++){
+        this->DrawRend::rasterize_point(blowupX0, blowupY0 + i, color);
+      }
+      blowupX0 += 1;
+      blowupY0 += slope;
+    }while (blowupX0 < blowupX1);
+  } else {
+    if (blowupY0 > blowupY1) {
+      swap(blowupX0, blowupX1); swap(blowupY0, blowupY1);
+    }
+    float slope = (blowupY1 - blowupY0)/(blowupX1 - blowupX0);
+    do {
+      for (int i = 0; i < sqrtSR; i++){
+        this->DrawRend::rasterize_point(blowupX0 + i, blowupY0, color);
+      }
+      blowupY0 += 1;
+      blowupX0 += (1/slope);
+    }while (blowupY0 < blowupY1);
+  }
 
 }
 
@@ -447,7 +517,61 @@ void DrawRend::rasterize_triangle( float x0, float y0,
                          float x2, float y2,
                          Color color, Triangle *tri) {
   // Part 2: Fill in this function with basic triangle rasterization code
+  float sqrtSR = sqrt(sample_rate);
+  float blowupX0 = sqrtSR*x0;
+  float blowupY0 = sqrtSR*y0;
+  float blowupX1 = sqrtSR*x1;
+  float blowupY1 = sqrtSR*y1;
+  float blowupX2 = sqrtSR*x2;
+  float blowupY2 = sqrtSR*y2;
+
+  float minX = std::min(blowupX0, std::min(blowupX1, blowupX2));
+  float maxX = std::max(blowupX0, std::max(blowupX1, blowupX2));
+  float minY = std::min(blowupY0, std::min(blowupY1, blowupY2));
+  float maxY = std::max(blowupY0, std::max(blowupY1, blowupY2));
+  SampleParams sp = SampleParams();
+  sp.psm = psm;
+  sp.lsm = lsm;
+
+
+
+  for (float scanY = ((int) minY + 0.5); scanY <= maxY; scanY++){
+    for (float scanX = ((int) minX + 0.5); scanX <= maxX; scanX++){
+      float alpha = ((blowupY1 - blowupY2)*(scanX - blowupX2) + (blowupX2 - blowupX1)*(scanY - blowupY2))/
+                    ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+      float beta = ((blowupY2 - blowupY0)*(scanX - blowupX2) + (blowupX0 - blowupX2)*(scanY - blowupY2))/
+                   ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+      float gamma = 1 - alpha - beta;
+
+      if ((alpha >= 0 && alpha <= 1)&&(beta >= 0 && beta <= 1)&&(gamma >= 0 && gamma <= 1)){
+        if (tri != NULL) {
+
+          float alphaR = ((blowupY1 - blowupY2)*((scanX + 1) - blowupX2) + (blowupX2 - blowupX1)*(scanY - blowupY2))/
+                    ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+          float betaR = ((blowupY2 - blowupY0)*((scanX + 1) - blowupX2) + (blowupX0 - blowupX2)*(scanY - blowupY2))/
+                   ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+
+          float alphaT = ((blowupY1 - blowupY2)*(scanX - blowupX2) + (blowupX2 - blowupX1)*((scanY + 1)- blowupY2))/
+                    ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+          float betaT = ((blowupY2 - blowupY0)*(scanX - blowupX2) + (blowupX0 - blowupX2)*((scanY + 1) - blowupY2))/
+                   ((blowupY1 - blowupY2)*(blowupX0 - blowupX2) +(blowupX2 - blowupX1)*(blowupY0 - blowupY2));
+
+          Vector2D dx = Vector2D(alphaR, betaR);
+          Vector2D dy = Vector2D(alphaT, betaT);
+          Vector2D berycentric = Vector2D(alpha, beta);
+          Color beryColor = tri->color(berycentric, dx, dy, sp);
+          this->DrawRend::rasterize_point(scanX, scanY, beryColor);
+        } else {
+          this->DrawRend::rasterize_point(scanX, scanY, color);
+        }
+      }
+    }
+  }
+
+
   // Part 3: Add supersampling to antialias your triangles
+
+
   // Part 5: Add barycentric coordinates and use tri->color for shading when available
   // Part 6: Fill in a SampleParams struct with psm, lsm and pass it to the tri->color function
   // Part 7: Pass in correct barycentric differentials dx and dy to tri->color for mipmapping

@@ -8,24 +8,69 @@ namespace CGL {
 Color Texture::sample(const SampleParams &sp) {
   // Part 6: Fill in the functionality for sampling 
   //          nearest or bilinear in mipmap level 0, conditional on sp.psm
+
   // Part 7: Fill in full sampling (including trilinear), 
   //          conditional on sp.psm and sp.lsm
+  float level = 0;
+  if (sp.lsm == 1){
+    level = max(Texture::get_level(sp), float(0));
+  }
+  if (sp.lsm == 2){
+    level = max(Texture::get_level(sp), float(0));
+    if (level == 0){
+      return Texture::sample_bilinear(sp.uv, (int)level);
+    }
+    Color levelD_0 = Texture::sample_bilinear(sp.uv, (int) floor(level));
+    Color levelD_1 = Texture::sample_bilinear(sp.uv, (int) ceil(level));
 
-  return Color();
+    float weight1 = level - floor(level);
+    float weight0 = ceil(level) - level;
+
+    float newR = weight0*levelD_0.r + weight1*levelD_1.r;
+    float newG = weight0*levelD_0.g + weight1*levelD_1.g;
+    float newB = weight0*levelD_0.b + weight1*levelD_1.b;
+    float newA = weight0*levelD_0.a + weight1*levelD_1.a;
+
+    return Color(newR, newG, newB, newA);
+  }
+  if (sp.psm == 0){
+    return Texture::sample_nearest(sp.uv, (int)level);
+  } else {
+    return Texture::sample_bilinear(sp.uv, (int)level);
+  }
 }
 
 // Given sp.du and sp.dv, returns the appropriate mipmap
 // level to use for L_NEAREST or L_LINEAR filtering.
 float Texture::get_level(const SampleParams &sp) {
   // Part 7: Fill this in.
-  return 0.f;
+  return log2(max(sqrt(pow(sp.du.x*width, 2) + pow((sp.dv.x*width), 2)), 
+             sqrt(pow(sp.du.y*height, 2) + pow(sp.dv.y*height, 2))));
 }
 
 // Indexes into the level'th mipmap
 // and returns the nearest pixel to (u,v)
 Color Texture::sample_nearest(Vector2D uv, int level) {
   // Part 6: Fill this in.
-  return Color();
+  if (level > ((int)mipmap.size() - 1)){
+    level = (int) (mipmap.size() - 1);
+  }
+  const MipLevel &myTex = mipmap[level];
+  int texWidth = myTex.width;
+  int texHeight = myTex.height;
+  float denormX = uv.x*texWidth;
+  float denormY = uv.y*texHeight;
+
+  if ((int)(denormX + 0.5) < 0 || (int)(denormX + 0.5) >= texWidth) return Color(255.0, 255.0, 255.0, 255.0);
+  if ((int)(denormY + 0.5) < 0 || (int)(denormY + 0.5) >= texHeight) return Color(255.0, 255.0, 255.0, 255.0);
+
+  int nearestPixel = 4*((int)(denormX + 0.5) + ((int)(denormY + 0.5))*texWidth);
+  unsigned char colorValues[4];
+  colorValues[0] = myTex.texels[nearestPixel];
+  colorValues[1] = myTex.texels[nearestPixel + 1];
+  colorValues[2] = myTex.texels[nearestPixel + 2];
+  colorValues[3] = myTex.texels[nearestPixel + 3];
+  return Color(colorValues);
 }
 
 // Indexes into the level'th mipmap
@@ -33,7 +78,42 @@ Color Texture::sample_nearest(Vector2D uv, int level) {
 // the four pixels surrounding (u,v)
 Color Texture::sample_bilinear(Vector2D uv, int level) {
   // Part 6: Fill this in.
-  return Color();
+  if (level > ((int)mipmap.size() - 1)){
+    level = (int) (mipmap.size() - 1);
+  }
+  const MipLevel &myTex = mipmap[level];
+  int texWidth = myTex.width;
+  int texHeight = myTex.height;
+  float denormX = uv.x*texWidth;
+  float denormY = uv.y*texHeight;
+
+  if ((int)(denormX + 0.5) < 0 || (int)(denormX + 0.5) >= texWidth) return Color(255.0, 255.0, 255.0, 255.0);
+  if ((int)(denormY + 0.5) < 0 || (int)(denormY + 0.5) >= texHeight) return Color(255.0, 255.0, 255.0, 255.0);
+
+  int blPixel = 4*((int)floor(denormX) + ((int)floor(denormY))*texWidth);
+  int brPixel = 4*((int)ceil(denormX) + ((int)floor(denormY))*texWidth);
+  int tlPixel = 4*((int)floor(denormX) + ((int)ceil(denormY))*texWidth);
+  int trPixel = 4*((int)ceil(denormX) + ((int)ceil(denormY))*texWidth);
+  unsigned char colorValues[4];
+  float bottomTwoValues[4];
+  float topTwoValues[4];
+  float dx = denormX - floor(denormX);
+  float dy = denormY - floor(denormY);
+  bottomTwoValues[0] = myTex.texels[blPixel] + dx*(myTex.texels[brPixel] - myTex.texels[blPixel]);
+  bottomTwoValues[1] = myTex.texels[blPixel + 1] + dx*(myTex.texels[brPixel + 1] - myTex.texels[blPixel + 1]);
+  bottomTwoValues[2] = myTex.texels[blPixel + 2] + dx*(myTex.texels[brPixel + 2] - myTex.texels[blPixel + 2]);
+  bottomTwoValues[3] = myTex.texels[blPixel + 3] + dx*(myTex.texels[brPixel + 3] - myTex.texels[blPixel + 3]);
+
+  topTwoValues[0] = myTex.texels[tlPixel] + dx*(myTex.texels[trPixel] - myTex.texels[tlPixel]);
+  topTwoValues[1] = myTex.texels[tlPixel + 1] + dx*(myTex.texels[trPixel + 1] - myTex.texels[tlPixel + 1]);
+  topTwoValues[2] = myTex.texels[tlPixel + 2] + dx*(myTex.texels[trPixel + 2] - myTex.texels[tlPixel + 2]);
+  topTwoValues[3] = myTex.texels[tlPixel + 3] + dx*(myTex.texels[trPixel + 3] - myTex.texels[tlPixel + 3]);
+
+  colorValues[0] = (char) (bottomTwoValues[0] + dy*(topTwoValues[0] - bottomTwoValues[0]));
+  colorValues[1] = (char) (bottomTwoValues[1] + dy*(topTwoValues[1] - bottomTwoValues[1]));
+  colorValues[2] = (char) (bottomTwoValues[2] + dy*(topTwoValues[2] - bottomTwoValues[2]));
+  colorValues[3] = (char) (bottomTwoValues[3] + dy*(topTwoValues[3] - bottomTwoValues[3]));
+  return Color(colorValues);
 }
 
 

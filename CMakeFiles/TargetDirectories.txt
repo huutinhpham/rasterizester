@@ -1,0 +1,5 @@
+/home/huutinh/Desktop/CS184/asst1_rasterizester/CGL/deps/glfw/CMakeFiles/uninstall.dir
+/home/huutinh/Desktop/CS184/asst1_rasterizester/src/CMakeFiles/rasterizester.dir
+/home/huutinh/Desktop/CS184/asst1_rasterizester/CGL/src/CMakeFiles/CGL.dir
+/home/huutinh/Desktop/CS184/asst1_rasterizester/CGL/deps/glew/CMakeFiles/glew.dir
+/home/huutinh/Desktop/CS184/asst1_rasterizester/CGL/deps/glfw/src/CMakeFiles/glfw.dir

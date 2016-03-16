@@ -49,6 +49,7 @@ struct Texture {
   void generate_mips(int startLevel = 0);
 
   Color sample(const SampleParams &sp);
+  
   float get_level(const SampleParams &sp);
 
   Color sample_nearest(Vector2D uv, int level = 0);
