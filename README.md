@@ -8,7 +8,7 @@ This project aims to render 2D images. First every pixels between two given poin
 
 ### Follow the link for full explanation of the methods made by me
 
-[CLICK ME FOR DOCUMENTATIONS](https://huutinhpham.github.io/projects/rasterizester/rasterizester.html)
+[CLICK ME FOR DOCUMENTATIONS](http://54.241.219.178/projects/Rasterizester)
 
 ##### Credit
 
